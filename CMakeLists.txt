@@ -12,7 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
 
-include_directories("include")
+include_directories(include)
 
 add_subdirectory(external)
 add_subdirectory(src)

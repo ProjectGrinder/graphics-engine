@@ -1,14 +1,13 @@
-#include <SDL3/SDL.h>
 #include <iostream>
 #include <print>
 #include <string>
 
-#include "SDL3_shadercross/SDL_shadercross.h"
-#include "error.h"
 #include "event_system.h"
 #include "exception.h"
+#include "graphics_device.h"
+#include "renderer.h"
+#include "resource_manager.h"
 #include "sdl_context.h"
-#include "shader.h"
 #include "timer.h"
 #include "window.h"
 
@@ -37,36 +36,28 @@ float4 pixel(PS_INPUT input): SV_TARGET {
 
 int main(int, char *[]) {
     try {
-
         GraphicsEngine::SDLContext context;
         GraphicsEngine::EventSystem event_system;
         GraphicsEngine::Window main_window{1280u, 640u};
+        GraphicsEngine::GraphicsDevice device{main_window};
+        GraphicsEngine::Renderer renderer{main_window, device};
+        GraphicsEngine::ResourceManager resource_manager{device};
         GraphicsEngine::Timer timer;
+
         bool is_running = true;
 
         event_system.subscribe(
             ::SDL_EventType::SDL_EVENT_QUIT,
             [&is_running](const ::SDL_Event &) { is_running = false; });
 
-        GraphicsEngine::Shader vertex{shader,
-                                      GraphicsEngine::ShaderType::VERTEX};
-
-        GraphicsEngine::Shader pixel{shader, GraphicsEngine::ShaderType::PIXEL};
-
-        std::println(std::cout, "{}", vertex.size());
-        std::println(std::cout, "{}", pixel.size());
-
         while (is_running) {
             timer.tick();
             event_system.poll_event();
-            main_window.drawing_begin();
-            main_window.drawing_end();
         }
     } catch (const GraphicsEngine::Exception &err) {
         std::println(std::cerr, "{}", err);
     } catch (...) {
         std::println(std::cerr, "unknown exception");
     }
-
     return 0;
 }

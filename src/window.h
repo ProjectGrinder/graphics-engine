@@ -12,9 +12,9 @@ class Window {
     Window(std::uint32_t width, std::uint32_t height);
     ~Window() = default;
 
-    void drawing_begin(const uint8_t r = 0u, const uint8_t g = 0u,
-                       const uint8_t b = 0u, const uint8_t a = 255u);
-    void drawing_end();
+    ::SDL_Window *native_handle() const;
+    std::uint32_t width() const;
+    std::uint32_t height() const;
 
     Window(const Window &) = delete;
     Window &operator=(const Window &) = delete;
@@ -24,7 +24,8 @@ class Window {
 
   private:
     AutoRelease<::SDL_Window *> _window;
-    AutoRelease<::SDL_Renderer *> _renderer;
+    uint32_t _width;
+    uint32_t _height;
 };
 
 } // namespace GraphicsEngine

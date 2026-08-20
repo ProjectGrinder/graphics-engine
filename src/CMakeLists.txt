@@ -1,9 +1,8 @@
-file(GLOB
+file(GLOB_RECURSE
     SRC_FILES
-    "./*.cpp"
-    "./*.h"
-    "./**/*.cpp"
-    "./**/*.h"
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
 
 add_executable(${PROJECT_NAME}
