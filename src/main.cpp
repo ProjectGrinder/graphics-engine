@@ -1,6 +1,6 @@
 #include <SDL3/SDL.h>
 #include <iostream>
-#include <ostream>
+#include <print>
 #include <string>
 
 #include "SDL3_shadercross/SDL_shadercross.h"
@@ -8,6 +8,7 @@
 #include "event_system.h"
 #include "exception.h"
 #include "sdl_context.h"
+#include "shader.h"
 #include "timer.h"
 #include "window.h"
 
@@ -47,40 +48,13 @@ int main(int, char *[]) {
             ::SDL_EventType::SDL_EVENT_QUIT,
             [&is_running](const ::SDL_Event &) { is_running = false; });
 
-        SDL_ShaderCross_HLSL_Info vertex_shader_info{
-            shader.c_str(),
-            "vertex",
-            nullptr,
-            nullptr,
-            SDL_SHADERCROSS_SHADERSTAGE_VERTEX,
-            0};
+        GraphicsEngine::Shader vertex{shader,
+                                      GraphicsEngine::ShaderType::VERTEX};
 
-        SDL_ShaderCross_HLSL_Info pixel_shader_info{
-            shader.c_str(),
-            "pixel",
-            nullptr,
-            nullptr,
-            SDL_SHADERCROSS_SHADERSTAGE_FRAGMENT,
-            0};
+        GraphicsEngine::Shader pixel{shader, GraphicsEngine::ShaderType::PIXEL};
 
-        uint64_t size = 0;
-
-        void *vs_code =
-            SDL_ShaderCross_CompileSPIRVFromHLSL(&vertex_shader_info, &size);
-
-        GraphicsEngine::ensure(vs_code != nullptr,
-                               "Failed to compile Vertex HLSL to SPIR-V: {}",
-                               ::SDL_GetError());
-        std::println(std::cout, "vs size: {}", size);
-
-        size = 0;
-        void *ps_code =
-            SDL_ShaderCross_CompileSPIRVFromHLSL(&pixel_shader_info, &size);
-
-        GraphicsEngine::ensure(ps_code != nullptr,
-                               "Failed to compile Vertex HLSL to SPIR-V: {}",
-                               ::SDL_GetError());
-        std::println(std::cout, "ps size: {}", size);
+        std::println(std::cout, "{}", vertex.size());
+        std::println(std::cout, "{}", pixel.size());
 
         while (is_running) {
             timer.tick();

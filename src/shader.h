@@ -6,7 +6,7 @@
 #include <utility>
 namespace GraphicsEngine {
 
-using ShaderBinary = void *;
+using ShaderBinary = uint8_t *;
 
 enum class ShaderType { VERTEX, PIXEL };
 
@@ -18,7 +18,7 @@ class Shader {
     uint64_t size() const;
 
   private:
-    AutoRelease<ShaderBinary> _shader_data;
+    AutoRelease<ShaderBinary> _spirv;
     ShaderType _type;
     uint64_t _size;
 };

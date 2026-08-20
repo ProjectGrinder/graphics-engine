@@ -6,7 +6,7 @@
 namespace GraphicsEngine {
 
 Shader::Shader(const std::string &source, ShaderType type)
-    : _shader_data{}, _type(type), _size{0} {
+    : _spirv{}, _type(type), _size{0} {
 
     const char *entrypoint = (type == ShaderType::VERTEX) ? "vertex" : "pixel";
     ::SDL_ShaderCross_ShaderStage stage =
@@ -20,11 +20,14 @@ Shader::Shader(const std::string &source, ShaderType type)
         shader_info.shader_stage =
             SDL_ShaderCross_ShaderStage::SDL_SHADERCROSS_SHADERSTAGE_FRAGMENT;
 
-    _shader_data = {
-        ::SDL_ShaderCross_CompileSPIRVFromHLSL(&shader_info, &_size),
-        ::SDL_free};
+    _spirv = {static_cast<uint8_t *>(
+                  ::SDL_ShaderCross_CompileSPIRVFromHLSL(&shader_info, &_size)),
+              ::SDL_free};
+    ensure(_spirv, "unable to load shader {}", SDL_GetError());
 
-    ensure(_shader_data, "unable to load shader {}", SDL_GetError());
+    auto meta_data = SDL_ShaderCross_ReflectGraphicsSPIRV(_spirv, _size, 0);
+    ensure(meta_data, "unable to get metadata of shader {}", SDL_GetError());
+    SDL_free(meta_data);
 }
 
 ShaderType Shader::type() const { return _type; }
