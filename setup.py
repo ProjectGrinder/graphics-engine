@@ -62,7 +62,9 @@ def main():
     custom_env = os.environ.copy()
     cmake_args = ["cmake", "-B", "build", "-G",
                   "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
-                  "-DSDLSHADERCROSS_VENDORED=ON", "-DSDLSHADERCROSS_DXC=ON"]
+                  "-DSDLSHADERCROSS_VENDORED=ON", "-DSDLSHADERCROSS_DXC=ON",
+                  "-DENABLE_SPIRV_CODEGEN=ON",
+                  "-DDIRECTX_SHADER_COMPILER_ENABLE_SPIRV=ON"]
 
     if current_os == "Windows":
         custom_env = setup_msvc_env()

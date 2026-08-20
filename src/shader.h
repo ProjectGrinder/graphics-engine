@@ -4,11 +4,11 @@
 #include "auto_release.h"
 #include "exception.h"
 
-#include <memory>
 #include <format>
-#include <utility>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 namespace GraphicsEngine {
 
 using ShaderBinary = uint8_t *;
@@ -29,7 +29,8 @@ enum class ShaderVariableType {
     FLOAT64
 };
 
-ShaderVariableType shadercross_to_shadervariable(const ::SDL_ShaderCross_IOVarType var_type);
+ShaderVariableType
+shadercross_to_shadervariable(const ::SDL_ShaderCross_IOVarType var_type);
 
 struct ShaderVariableEntry {
     std::string name;
@@ -43,7 +44,8 @@ class Shader {
     Shader(const std::string &source, ShaderType type);
     ShaderType type() const;
     uint64_t size() const;
-    const std::unordered_map<std::string, ShaderVariableEntry> &variables() const;
+    const std::unordered_map<std::string, ShaderVariableEntry> &
+    variables() const;
     const ::SDL_ShaderCross_SPIRV_Info *shader_info() const;
     const ::SDL_ShaderCross_GraphicsShaderResourceInfo *resource_info() const;
 
@@ -55,7 +57,7 @@ class Shader {
   private:
     struct Impl {
         AutoRelease<ShaderBinary> shader_data;
-        AutoRelease<SDL_ShaderCross_GraphicsShaderMetadata*> reflect;
+        AutoRelease<SDL_ShaderCross_GraphicsShaderMetadata *> reflect;
         ::SDL_ShaderCross_SPIRV_Info info;
         std::unordered_map<std::string, ShaderVariableEntry> variables;
     };
@@ -86,7 +88,6 @@ template <> struct std::formatter<GraphicsEngine::ShaderType> {
                                         std::to_underlying(obj));
     }
 };
-
 
 template <> struct std::formatter<GraphicsEngine::ShaderVariableType> {
 
@@ -124,7 +125,8 @@ template <> struct std::formatter<GraphicsEngine::ShaderVariableType> {
             return std::format_to(ctx.out(), "FLOAT64");
         }
 
-        throw GraphicsEngine::Exception("unknown shader variable type: {}", std::to_underlying(obj));
+        throw GraphicsEngine::Exception("unknown shader variable type: {}",
+                                        std::to_underlying(obj));
     }
 };
 
@@ -135,9 +137,8 @@ template <> struct std::formatter<GraphicsEngine::ShaderVariableEntry> {
 
     auto format(const GraphicsEngine::ShaderVariableEntry &obj,
                 std::format_context &ctx) const {
-        return std::format_to(
-            ctx.out(),
-            "Name: {}\nLocation: {}\nType: {}\nSize:{}",
-            obj.name, obj.location, obj.type, obj.size);
+        return std::format_to(ctx.out(),
+                              "Name: {}\nLocation: {}\nType: {}\nSize:{}",
+                              obj.name, obj.location, obj.type, obj.size);
     }
 };

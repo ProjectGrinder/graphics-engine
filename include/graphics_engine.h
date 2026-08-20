@@ -1,9 +1,11 @@
 #pragma once
 
+#include "SDL3/SDL_events.h"
+
 #ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <initializer_list>
 #include <ranges>
 #include <span>
 #include <string_view>
@@ -16,14 +18,7 @@
 
 typedef uint32_t MeshHandler;
 typedef uint32_t MaterialHandler;
-typedef void *GraphicsEngineContext;
-typedef void (*EventFunction)(void);
-
-typedef struct Transform {
-    float position[3];
-    float rotation[3];
-    float scale[3];
-} Transform;
+typedef void (*EventFunction)(const SDL_Event *);
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #ifdef BUILDING_PLUGIN_DLL
@@ -36,20 +31,19 @@ typedef struct Transform {
 #endif
 
 typedef struct GraphicsEngineAPI {
-    uint32_t version; // API Versioning guard (e.g., 0x00010000)
+    uint32_t version;
 
-    void (*draw_mesh)(GraphicsEngineContext ctx, MeshHandler mesh,
-                      MaterialHandler material, const Transform *transform);
-    MeshHandler (*create_mesh)(GraphicsEngineContext ctx, const void *vbuf,
-                               size_t vbuf_size, const void *ibuf,
-                               size_t ibuf_size);
-    MaterialHandler (*create_material)(GraphicsEngineContext ctx,
-                                       const char *shader_source,
+    void (*draw_mesh)(MeshHandler mesh, MaterialHandler material);
+    MeshHandler (*create_mesh)(const void *vbuf, size_t vbuf_size,
+                               const void *ibuf, size_t ibuf_size);
+    MaterialHandler (*create_material)(const char *shader_source,
                                        size_t source_size);
-    uint32_t (*event_subscribe)(GraphicsEngineContext ctx, int event,
-                                EventFunction func);
-    void (*event_unsubscribe)(GraphicsEngineContext ctx, int event,
-                              uint32_t id);
+    void (*bind_vertex_data)(MaterialHandler material, void *data,
+                             size_t data_size);
+    void (*bind_pixel_data)(MaterialHandler material, void *data,
+                            size_t data_size);
+    uint32_t (*event_subscribe)(SDL_EventType event, EventFunction func);
+    void (*event_unsubscribe)(SDL_EventType event, uint32_t id);
 } GraphicsEngineAPI;
 
 #ifdef __cplusplus
@@ -57,19 +51,15 @@ namespace GraphicsEngine {
 
 class Context {
   private:
-    GraphicsEngineContext m_raw_ctx{nullptr};
     const GraphicsEngineAPI *m_api{nullptr};
 
   public:
-    Context(GraphicsEngineContext raw_ctx, const GraphicsEngineAPI *api)
-        : m_raw_ctx(raw_ctx), m_api(api) {}
-
+    explicit Context(const GraphicsEngineAPI *api) : m_api(api) {}
     virtual ~Context() = default;
 
-    void draw(MeshHandler mesh, MaterialHandler material,
-              const Transform &transform = {}) {
+    void draw(MeshHandler mesh, MaterialHandler material) {
         if (m_api && m_api->draw_mesh) {
-            m_api->draw_mesh(m_raw_ctx, mesh, material, &transform);
+            m_api->draw_mesh(mesh, material);
         }
     }
 
@@ -100,22 +90,40 @@ class Context {
 
     MaterialHandler create_material(std::string_view shader_source) {
         if (m_api && m_api->create_material) {
-            return m_api->create_material(m_raw_ctx, shader_source.data(),
+            return m_api->create_material(shader_source.data(),
                                           shader_source.size());
         }
         return 0;
     }
 
-    uint32_t event_subscribe(int event, EventFunction func) {
+    template <typename T>
+    void bind_vertex_data(MaterialHandler material, const T &data) {
+        if (m_api && m_api->bind_vertex_data) {
+            m_api->bind_vertex_data(
+                material, const_cast<void *>(static_cast<const void *>(&data)),
+                sizeof(T));
+        }
+    }
+
+    template <typename T>
+    void bind_pixel_data(MaterialHandler material, const T &data) {
+        if (m_api && m_api->bind_pixel_data) {
+            m_api->bind_pixel_data(
+                material, const_cast<void *>(static_cast<const void *>(&data)),
+                sizeof(T));
+        }
+    }
+
+    uint32_t event_subscribe(SDL_EventType event, EventFunction func) {
         if (m_api && m_api->event_subscribe) {
-            return m_api->event_subscribe(m_raw_ctx, event, func);
+            return m_api->event_subscribe(event, func);
         }
         return 0;
     }
 
-    void event_unsubscribe(int event, uint32_t id) {
+    void event_unsubscribe(SDL_EventType event, uint32_t id) {
         if (m_api && m_api->event_unsubscribe) {
-            m_api->event_unsubscribe(m_raw_ctx, event, id);
+            m_api->event_unsubscribe(event, id);
         }
     }
 
@@ -123,71 +131,66 @@ class Context {
     MeshHandler _create_mesh(std::span<const std::byte> vertex_bytes,
                              std::span<const uint32_t> indices) {
         if (m_api && m_api->create_mesh) {
-            return m_api->create_mesh(m_raw_ctx, vertex_bytes.data(),
-                                      vertex_bytes.size(), indices.data(),
-                                      indices.size_bytes());
+            return m_api->create_mesh(vertex_bytes.data(), vertex_bytes.size(),
+                                      indices.data(), indices.size_bytes());
         }
         return 0;
     }
 };
 
-} // namespace GraphicsEngine
-#endif
-
-typedef void (*AppInitFn)(GraphicsEngineContext ctx,
-                          const GraphicsEngineAPI *api);
-typedef void (*AppUpdateFn)(GraphicsEngineContext ctx);
-typedef void (*AppExitFn)(GraphicsEngineContext ctx);
-
-#ifdef __cplusplus
-void on_init(GraphicsEngine::Context *ctx);
-void on_update(GraphicsEngine::Context *ctx);
-void on_exit(GraphicsEngine::Context *ctx);
-
-namespace GraphicsEngine {
 inline Context *&get_global_context() {
     static Context *instance = nullptr;
     return instance;
 }
+
 } // namespace GraphicsEngine
+
+void on_init(GraphicsEngine::Context *ctx);
+void on_update(GraphicsEngine::Context *ctx);
+void on_render(GraphicsEngine::Context *ctx);
+void on_exit(GraphicsEngine::Context *ctx);
+
+typedef void (*AppInitFn)(const GraphicsEngineAPI *api);
+typedef void (*AppUpdateFn)(const GraphicsEngineAPI *api);
+typedef void (*AppRenderFn)(const GraphicsEngineAPI *api);
+typedef void (*AppExitFn)(const GraphicsEngineAPI *api);
+
+#define GRAPHICS_ENGINE_PLUGIN()                                               \
+    extern "C" {                                                               \
+    PLUGIN_API void app_init(const GraphicsEngineAPI *api) {                   \
+        static GraphicsEngine::Context cpp_ctx(api);                           \
+        GraphicsEngine::get_global_context() = &cpp_ctx;                       \
+        on_init(&cpp_ctx);                                                     \
+    }                                                                          \
+    PLUGIN_API void app_update(const GraphicsEngineAPI *api) {                 \
+        (void)(api);                                                           \
+        on_update(GraphicsEngine::get_global_context());                       \
+    }                                                                          \
+    PLUGIN_API void app_render(const GraphicsEngineAPI *api) {                 \
+        (void)(api);                                                           \
+        on_render(GraphicsEngine::get_global_context());                       \
+    }                                                                          \
+    PLUGIN_API void app_exit(const GraphicsEngineAPI *api) {                   \
+        (void)(api);                                                           \
+        on_exit(GraphicsEngine::get_global_context());                         \
+        GraphicsEngine::get_global_context() = nullptr;                        \
+    }                                                                          \
+    }
+
 #else
-void on_init(GraphicsEngineContext ctx, const GraphicsEngineAPI *api);
-void on_update(GraphicsEngineContext ctx);
-void on_exit(GraphicsEngineContext ctx);
-#endif
+void on_init(const GraphicsEngineAPI *api);
+void on_update(const GraphicsEngineAPI *api);
+void on_render(const GraphicsEngineAPI *api);
+void on_exit(const GraphicsEngineAPI *api);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define GRAPHICS_ENGINE_PLUGIN()                                               \
+    PLUGIN_API void app_init(const GraphicsEngineAPI *api) { on_init(api); }   \
+    PLUGIN_API void app_update(const GraphicsEngineAPI *api) {                 \
+        on_update(api);                                                        \
+    }                                                                          \
+    PLUGIN_API void app_render(const GraphicsEngineAPI *api) {                 \
+        on_render(api);                                                        \
+    }                                                                          \
+    PLUGIN_API void app_exit(const GraphicsEngineAPI *api) { on_exit(api); }
 
-inline PLUGIN_API void app_init(GraphicsEngineContext ctx,
-                                const GraphicsEngineAPI *api) {
-#ifdef __cplusplus
-    static GraphicsEngine::Context cpp_ctx(ctx, api);
-    GraphicsEngine::get_global_context() = &cpp_ctx;
-    on_init(&cpp_ctx);
-#else
-    on_init(ctx, api);
-#endif
-}
-
-inline PLUGIN_API void app_update(GraphicsEngineContext ctx) {
-#ifdef __cplusplus
-    on_update(GraphicsEngine::get_global_context());
-#else
-    on_update(ctx);
-#endif
-}
-
-inline PLUGIN_API void app_exit(GraphicsEngineContext ctx) {
-#ifdef __cplusplus
-    on_exit(GraphicsEngine::get_global_context());
-    GraphicsEngine::get_global_context() = nullptr;
-#else
-    on_exit(ctx);
-#endif
-}
-
-#ifdef __cplusplus
-}
 #endif

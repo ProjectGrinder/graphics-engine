@@ -1,6 +1,5 @@
 #include "event_system.h"
 #include "SDL3/SDL_events.h"
-#include <vector>
 
 namespace GraphicsEngine {
 
@@ -8,9 +7,13 @@ void EventSystem::poll_event() {
     ::SDL_Event event;
     while (::SDL_PollEvent(&event))
         if (auto it = _event_map.find(static_cast<::SDL_EventType>(event.type));
-            it != _event_map.end())
-            for (auto &v : it->second)
-                v.callback(event);
+            it != _event_map.end()) {
+            auto callbacks = it->second;
+            for (const auto &v : callbacks) {
+                if (v.callback)
+                    v.callback(&event);
+            }
+        }
 }
 
 uint64_t EventSystem::subscribe(::SDL_EventType type,

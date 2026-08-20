@@ -16,6 +16,7 @@ include_directories(include)
 
 add_subdirectory(external)
 add_subdirectory(src)
+add_subdirectory(test)
 
 add_custom_target(
     copy-compile-commands ALL
@@ -23,5 +24,3 @@ add_custom_target(
         ${CMAKE_BINARY_DIR}/compile_commands.json
         ${CMAKE_CURRENT_LIST_DIR}
     )
-
-add_subdirectory(test)

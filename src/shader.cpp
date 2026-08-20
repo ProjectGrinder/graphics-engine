@@ -2,6 +2,7 @@
 #include "SDL3_shadercross/SDL_shadercross.h"
 #include "auto_release.h"
 #include "error.h"
+#include <print>
 
 namespace GraphicsEngine {
 
@@ -71,6 +72,7 @@ Shader::Shader(const std::string &source, ShaderType type)
     for (int i = 0; i < _impl->reflect.get()->num_inputs; ++i) {
         auto [name, location, vector_type, vector_size] =
             _impl->reflect.get()->inputs[i];
+        std::println("{}", name);
         std::string clean{name};
         if (clean.starts_with("in.var.")) {
             clean.erase(0, 7);

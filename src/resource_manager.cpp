@@ -2,7 +2,7 @@
 
 namespace GraphicsEngine {
 ResourceManager::ResourceManager(GraphicsDevice &device)
-    : _device(device), _next_mesh_id(0), _next_mat_id(0) {}
+    : _device(device), _next_mesh_id(1), _next_mat_id(1) {}
 
 MeshHandler ResourceManager::create_mesh(std::span<const std::byte> vbuf,
                                          std::span<const uint32_t> ibuf) {
