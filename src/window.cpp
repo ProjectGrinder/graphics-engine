@@ -10,21 +10,15 @@
 
 namespace GraphicsEngine {
 
-Window::Window(std::uint32_t width, std::uint32_t height) : _window({}) {
+Window::Window(std::uint32_t width, std::uint32_t height) : _window{}, _width {width}, _height{height} {
     _window = {::SDL_CreateWindow(STR(PROJECT_NAME), width, height, 0),
                ::SDL_DestroyWindow};
     ensure(_window, "Could not create window: {}", ::SDL_GetError());
-
-    _renderer = {::SDL_CreateRenderer(_window, nullptr), ::SDL_DestroyRenderer};
-    ensure(_renderer, "Could not renderer: {}", ::SDL_GetError());
 }
 
-void Window::drawing_begin(const uint8_t r, const uint8_t g, const uint8_t b,
-                           const uint8_t a) {
-    SDL_SetRenderDrawColor(_renderer, r, g, b, a);
-    SDL_RenderClear(_renderer);
-}
 
-void Window::drawing_end() { SDL_RenderPresent(_renderer); }
+::SDL_Window *Window::native_handle() const { return _window; }
+std::uint32_t Window::width() const { return _width; }
+std::uint32_t Window::height() const { return _height; }
 
 } // namespace GraphicsEngine
